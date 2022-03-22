@@ -17,9 +17,8 @@ An AI-Driven Secure and Intelligent Robotic Delivery System.
 -
 
 ### Non-Cooperative authentication process
--
--
--
+- Automatic Speech Recognition
+- Human Detection
 
 ### Cooperative authentication process
 -
