@@ -9,8 +9,8 @@ In general, price is the key element in shipping, and half of the costs are tied
 An AI-Driven Secure and Intelligent Robotic Delivery System.
 
 ## Network protocol
--
--
+- ECDH Key Exchange
+- ECDSA Digital Signature
 
 
 ## Off-Line Authentication 
