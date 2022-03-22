@@ -1,0 +1,118 @@
+free c : channel.
+free c_r : channel[private].
+
+(* ECDH Key Exchange *)
+type epkey.
+type eskey.
+type akey.
+
+fun epkeyGenerate(bitstring, eskey, bitstring) : epkey.
+fun asymmetricKey(epkey, eskey, bitstring) : akey.
+
+(* ECDSA Digital Signatures *)
+type sskey.
+type spkey.
+type k.
+
+fun spk(sskey) : spkey.
+fun sign_1(k, bitstring) : bitstring.
+fun sign_2(k, bitstring, sskey, bitstring, bitstring) : bitstring.
+
+reduc forall S:bitstring,z:bitstring, G:bitstring,R:bitstring,pks_2:spkey ; checksign( S,z,G,R,pks_2 )=R.
+
+(* hash function *)
+fun hash(epkey):bitstring.
+
+(* Reachability *)
+free g:bitstring.
+free p1:bitstring.
+
+free G:bitstring.
+free p2:bitstring.
+
+free sks_1:eskey[private].
+free sks_2:sskey[private].
+free randomk:k[private].
+
+free skc_1:eskey[private].
+free skc_2:sskey[private].
+
+event client_check_sign.
+event client_exchange_key.
+event server_check_sign.
+event server_exchange_key.
+event server_init_key.
+event client_init_key.
+event server_send_key.
+event robot_get_key.
+
+
+query event(robot_get_key)==>event(server_send_key).
+query event(client_exchange_key)==>event(client_check_sign).
+query event(server_exchange_key)==>event(server_check_sign).
+
+
+query attacker(sks_1).
+query attacker(sks_2).
+query attacker(skc_1).
+query attacker(skc_2).
+query attacker(randomk).
+
+
+let server()=
+    event server_init_key;
+    let pks_1 = epkeyGenerate(g,sks_1,p1) in
+
+    let pks_2 = spk(sks_2)in
+    let R_1 = sign_1(randomk,G) in
+    let pks_1_hash = hash(pks_1) in
+    let S_1 = sign_2(randomk,pks_1_hash,sks_2,R_1,p2) in
+
+    out(c,(R_1, S_1, pks_1, pks_2));
+
+    in(c, (R_2:bitstring, S_2:bitstring, pkc_1:epkey, pkc_2:spkey));
+
+    event server_check_sign;
+    let pkc_1_hash = hash(pkc_1) in
+    let signatures_client = checksign(S_2, pkc_1_hash, G, R_2, pkc_2) in
+
+    if R_2 = signatures_client then
+        event server_exchange_key;
+        let askey = asymmetricKey(pkc_1,sks_1, p1) in
+
+        event server_send_key;
+        out(c_r, askey);
+        0.
+
+
+
+
+let client()=
+    in (c, (R_1:bitstring, S_1:bitstring, pks_1:epkey, pks_2:spkey));
+    
+    event client_check_sign;
+    let pks_1_hash = hash(pks_1) in
+    let signatures_server = checksign(S_1,pks_1_hash,G,R_1,pks_2 ) in
+
+    if R_1 = signatures_server then
+
+        event client_init_key;
+        let pkc_1 = epkeyGenerate(g,skc_1,p1) in
+
+        let pkc_2 = spk(skc_2) in
+        let R_2 = sign_1(randomk, G) in
+        let pkc_1_hash = hash(pkc_1) in
+        let S_2 = sign_2(randomk,pkc_1_hash, skc_2, R_2, p2) in
+
+        event client_exchange_key;
+        let askey = asymmetricKey(pks_1, skc_1, p1) in
+
+        out(c,(R_2, S_2, pkc_1, pkc_2)).
+
+let robot()=
+    event robot_get_key;
+    in(c_r, askey:akey).
+
+
+process
+    server() | client()
